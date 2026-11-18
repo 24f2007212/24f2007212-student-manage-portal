@@ -2,7 +2,6 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from enum import Enum
 
-
 class Role(Enum):
     ADMIN = "admin"
     EXAMINER = "examiner"
@@ -48,31 +47,23 @@ class User(db.Model):
     password_hash = db.Column(db.String(200), nullable=False)
     phone = db.Column(db.String(15), nullable=False)
     approved = db.Column(db.Boolean, default=True)
-    active = db.Column(db.Boolean, default=True)#admin can deactivate examiners
+    active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     role = db.Column(
     db.Enum(Role),
     nullable=False
     )
-    #relations
-    #examiner extra details (one to one)
     examiner_profile = db.relationship("ExaminerProfile", backref="user", uselist=False, lazy=True)
-    #examiner id and examinations assigned to him
-    assigned_exams = db.relationship("Examination", backref="assigned_examiner", lazy=True)
-    #examiner id and slots created by him
-    slots = db.relationship("ExamSlot", backref="examiner", lazy=True)
-    #student id and bookings
-    bookings = db.relationship("Booking", backref="student", lazy=True)
 
-#extra details only for examiners
+    assigned_exams = db.relationship("Examination", backref="assigned_examiner", lazy=True)
+    slots = db.relationship("ExamSlot", backref="examiner", lazy=True)
+    bookings = db.relationship("Booking", backref="student", lazy=True)
 class ExaminerProfile(db.Model):
     __tablename__ = "examiner_profiles"
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True, nullable=False)
     department = db.Column(db.String(100), nullable=False)
     designation = db.Column(db.String(100))
-
-#table for courses
 class Course(db.Model):
     __tablename__ = "courses"
     id = db.Column(db.Integer, primary_key=True)
@@ -85,10 +76,8 @@ class Course(db.Model):
     default=CourseStatus.ACTIVE
     )
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    #course id and examinations
     examinations = db.relationship("Examination", backref="course", lazy=True, cascade="all, delete-orphan")
 
-#table for examinations
 class Examination(db.Model):
     __tablename__ = "examinations"
     __table_args__ = (
@@ -119,16 +108,15 @@ class Examination(db.Model):
     nullable=False,
     default=ExamStatus.DRAFT
     )
-    #nullable because exam can be in draft without examiner
     examiner_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     results_published = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    #relations, cascade so deleting exam removes its rubrics, slots and bookings
+
     rubrics = db.relationship("Rubric", backref="examination", lazy=True, cascade="all, delete-orphan")
     slots = db.relationship("ExamSlot", backref="examination", lazy=True, cascade="all, delete-orphan")
     bookings = db.relationship("Booking", backref="examination", lazy=True, cascade="all, delete-orphan")
 
-#evaluation criteria for an examination
+#evaluation criteria
 class Rubric(db.Model):
     __tablename__ = "rubrics"
     __table_args__ = (
@@ -148,7 +136,7 @@ class Rubric(db.Model):
     weightage = db.Column(db.Float, nullable=False)
     description = db.Column(db.Text)
 
-#time slot created by examiner
+#time slot by ex
 class ExamSlot(db.Model):
     __tablename__ = "exam_slots"
     __table_args__ = (
@@ -178,14 +166,11 @@ class ExamSlot(db.Model):
     nullable=False,
     default=SlotStatus.AVAILABLE
     )
-    #slot id and bookings
     bookings = db.relationship("Booking", backref="slot", lazy=True)
 
-#student booking a slot
 class Booking(db.Model):
     __tablename__ = "bookings"
     __table_args__ = (
-        #one student can book only one slot per examination
         db.UniqueConstraint(
             "student_id",
             "exam_id",
@@ -202,14 +187,11 @@ class Booking(db.Model):
     nullable=False,
     default=BookingStatus.BOOKED
     )
-    #filled by examiner after evaluation
     total_marks = db.Column(db.Float)
     remarks = db.Column(db.Text)
     evaluated = db.Column(db.Boolean, default=False)
-    #marks for each rubric
-    evaluations = db.relationship("Evaluation", backref="booking", lazy=True, cascade="all, delete-orphan")
 
-#marks given for one rubric of one booking
+    evaluations = db.relationship("Evaluation", backref="booking", lazy=True, cascade="all, delete-orphan")
 class Evaluation(db.Model):
     __tablename__ = "evaluations"
     __table_args__ = (
