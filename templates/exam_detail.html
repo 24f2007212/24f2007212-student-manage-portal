@@ -96,6 +96,22 @@
     </div>
 </div>
 
+<h4 class="mt-4">Completion Details</h4>
+<div class="row text-center mb-3">
+    <div class="col-md-3 col-6 mb-2"><div class="card"><div class="card-body">
+        <h5>{{ stats.booked }}</h5><small>Booked</small>
+    </div></div></div>
+    <div class="col-md-3 col-6 mb-2"><div class="card"><div class="card-body">
+        <h5>{{ stats.completed }}</h5><small>Completed</small>
+    </div></div></div>
+    <div class="col-md-3 col-6 mb-2"><div class="card"><div class="card-body">
+        <h5>{{ stats.cancelled }}</h5><small>Cancelled</small>
+    </div></div></div>
+    <div class="col-md-3 col-6 mb-2"><div class="card"><div class="card-body">
+        <h5>{{ stats.evaluated }}</h5><small>Evaluated</small>
+    </div></div></div>
+</div>
+
 <h4 class="mt-4">Slots</h4>
 <table class="table table-bordered bg-white">
     <tr>
@@ -112,6 +128,25 @@
     </tr>
     {% else %}
     <tr><td colspan="6">No slots created yet.</td></tr>
+    {% endfor %}
+</table>
+<h4 class="mt-4">Bookings</h4>
+<table class="table table-bordered bg-white">
+    <tr>
+        <th>ID</th><th>Student</th><th>Slot</th><th>Examiner</th><th>Status</th><th>Marks</th><th></th>
+    </tr>
+    {% for b in exam.bookings %}
+    <tr>
+        <td>{{ b.id }}</td>
+        <td>{{ b.student.name }}</td>
+        <td>{{ b.slot.slot_date }} {{ b.slot.start_time.strftime("%H:%M") }}</td>
+        <td>{{ b.slot.examiner.name }}</td>
+        <td>{{ b.status.value }}</td>
+        <td>{{ b.total_marks if b.evaluated else "-" }}</td>
+        <td><a href="{{ url_for('admin_booking_detail', booking_id=b.id) }}" class="btn btn-info btn-sm">View</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">No bookings yet.</td></tr>
     {% endfor %}
 </table>
 {% endblock %}

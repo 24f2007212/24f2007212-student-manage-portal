@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Booking #{{ booking.id }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h3>Booking #{{ booking.id }}</h3>
+
+                <table class="table table-bordered mt-3">
+                    <tr><th>Student</th><td>{{ booking.student.name }} ({{ booking.student.email }})</td></tr>
+                    <tr><th>Examination</th><td>{{ booking.examination.exam_name }} ({{ booking.examination.course.course_code }})</td></tr>
+                    <tr><th>Slot</th><td>{{ booking.slot.slot_date }} {{ booking.slot.start_time.strftime("%H:%M") }} - {{ booking.slot.end_time.strftime("%H:%M") }}</td></tr>
+                    <tr><th>Examiner</th><td>{{ booking.slot.examiner.name }}</td></tr>
+                    <tr><th>Booked On</th><td>{{ booking.booking_date.strftime("%Y-%m-%d %H:%M") }}</td></tr>
+                    <tr><th>Status</th><td>{{ booking.status.value }}</td></tr>
+                    <tr><th>Evaluated</th><td>{{ "Yes" if booking.evaluated else "No" }}</td></tr>
+                </table>
+
+                {% if booking.evaluated %}
+                <h5>Evaluation</h5>
+                <table class="table table-bordered">
+                    <tr><th>Criterion</th><th>Marks</th><th>Out of</th></tr>
+                    {% for e in booking.evaluations %}
+                    <tr>
+                        <td>{{ e.rubric.criterion_name }}</td>
+                        <td>{{ e.marks }}</td>
+                        <td>{{ e.rubric.max_marks }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr>
+                        <th>Total</th>
+                        <th>{{ booking.total_marks }}</th>
+                        <th>{{ booking.examination.max_marks }}</th>
+                    </tr>
+                </table>
+                <p><b>Remarks:</b> {{ booking.remarks or "No remarks" }}</p>
+                {% endif %}
+
+                <a href="{{ url_for('admin_bookings') }}" class="btn btn-secondary">Back</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

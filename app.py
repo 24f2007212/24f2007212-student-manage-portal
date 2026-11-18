@@ -372,6 +372,16 @@ def admin_bookings():
 
     return render_template("admin_bookings.html", bookings=bookings, BookingStatus=BookingStatus)
 
+@app.route("/admin/booking/<int:booking_id>")
+def admin_booking_detail(booking_id):
+    if session.get("role") != "ADMIN":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+
+    booking = Booking.query.get_or_404(booking_id)
+
+    return render_template("admin_booking_detail.html", booking=booking)
+
 @app.route("/admin/booking/<int:booking_id>/reschedule", methods=["GET", "POST"])
 def reschedule_booking(booking_id):
     if session.get("role") != "ADMIN":
@@ -710,11 +720,29 @@ def exam_detail(exam_id):
 
     rubric_total = sum(r.max_marks for r in exam.rubrics)
 
+    stats = {
+        "booked": 0,
+        "cancelled": 0,
+        "completed": 0,
+        "evaluated": 0
+    }
+    for b in exam.bookings:
+        if b.status == BookingStatus.BOOKED:
+            stats["booked"] += 1
+        elif b.status == BookingStatus.CANCELLED:
+            stats["cancelled"] += 1
+        else:
+            stats["completed"] += 1
+        if b.evaluated:
+            stats["evaluated"] += 1
+
     return render_template(
         "exam_detail.html",
         exam=exam,
         rubric_total=rubric_total,
-        ExamStatus=ExamStatus
+        stats=stats,
+        ExamStatus=ExamStatus,
+        BookingStatus=BookingStatus
     )
 
 @app.route("/admin/exam/<int:exam_id>/status", methods=["POST"])
@@ -1428,7 +1456,7 @@ def cancel_booking(booking_id):
         flash("This booking cannot be cancelled.", "warning")
         return redirect(url_for("student_dashboard"))
 
-    if date.today() > booking.examination.booking_end:
+    if not booking_open(booking.examination):
         flash("Booking deadline is over. You cannot cancel now.", "danger")
         return redirect(url_for("student_dashboard"))
 
