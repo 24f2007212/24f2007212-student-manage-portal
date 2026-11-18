@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="mb-3">My Profile</h3>
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" value="{{ examiner.email }}" disabled>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name" class="form-control" value="{{ examiner.name }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="text" name="phone" class="form-control" maxlength="10" value="{{ examiner.phone }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" name="department" class="form-control" value="{{ examiner.examiner_profile.department if examiner.examiner_profile }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Designation</label>
+                        <input type="text" name="designation" class="form-control" value="{{ examiner.examiner_profile.designation if examiner.examiner_profile and examiner.examiner_profile.designation }}">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

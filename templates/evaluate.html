@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluate{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="mb-3">Evaluate {{ booking.student.name }}</h3>
+                <p class="text-muted">{{ exam.exam_name }} | Maximum marks {{ exam.max_marks }}</p>
+
+                <form method="POST">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Criterion</th><th>Description</th><th>Weightage</th><th>Marks</th>
+                        </tr>
+                        {% for rubric in exam.rubrics %}
+                        <tr>
+                            <td>{{ rubric.criterion_name }}</td>
+                            <td>{{ rubric.description or "" }}</td>
+                            <td>{{ rubric.weightage }}</td>
+                            <td>
+                                <input type="number" name="marks_{{ rubric.id }}" class="form-control"
+                                       min="0" max="{{ rubric.max_marks }}" step="0.5"
+                                       value="{{ old_marks.get(rubric.id, '') }}" required>
+                                <small class="text-muted">out of {{ rubric.max_marks }}</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+
+                    <div class="mb-3">
+                        <label class="form-label">Remarks</label>
+                        <textarea name="remarks" class="form-control">{{ booking.remarks or "" }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Submit Evaluation</button>
+                    <a href="{{ url_for('slot_students', slot_id=booking.slot_id) }}" class="btn btn-secondary">Back</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

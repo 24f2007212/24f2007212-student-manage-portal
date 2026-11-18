@@ -4,9 +4,73 @@
 
 {% block content %}
 <h2>Examiner Dashboard</h2>
-<p class="text-muted">Welcome, {{ examiner.name }}.</p>
+<p class="text-muted">
+    Welcome, {{ examiner.name }}
+    {% if examiner.examiner_profile %}({{ examiner.examiner_profile.department }}){% endif %}
+</p>
 
-{% if examiner.examiner_profile %}
-<p>Department: {{ examiner.examiner_profile.department }}</p>
-{% endif %}
+<div class="row text-center mb-4">
+    <div class="col-md-3 col-6 mb-2">
+        <div class="card"><div class="card-body">
+            <h4>{{ assigned_exams|length }}</h4><small>Assigned Examinations</small>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6 mb-2">
+        <div class="card"><div class="card-body">
+            <h4>{{ slot_data|length }}</h4><small>Created Slots</small>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6 mb-2">
+        <div class="card"><div class="card-body">
+            <h4>{{ total_booked }}</h4><small>Students Booked</small>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6 mb-2">
+        <div class="card"><div class="card-body">
+            <h4>{{ total_pending }}</h4><small>Pending Evaluations</small>
+        </div></div>
+    </div>
+</div>
+
+<h4>Assigned Examinations</h4>
+<table class="table table-bordered bg-white">
+    <tr>
+        <th>ID</th><th>Name</th><th>Course</th><th>Type</th><th>Slot Creation</th><th>Booking</th><th>Status</th><th></th>
+    </tr>
+    {% for exam in assigned_exams %}
+    <tr>
+        <td>{{ exam.id }}</td>
+        <td>{{ exam.exam_name }}</td>
+        <td>{{ exam.course.course_code }}</td>
+        <td>{{ exam.exam_type.value }}</td>
+        <td>{{ exam.slot_creation_start }} to {{ exam.slot_creation_end }}</td>
+        <td>{{ exam.booking_start }} to {{ exam.booking_end }}</td>
+        <td>{{ exam.status.value }}</td>
+        <td><a href="{{ url_for('examiner_slots', exam_id=exam.id) }}" class="btn btn-primary btn-sm">Slots</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8">No examinations assigned yet.</td></tr>
+    {% endfor %}
+</table>
+
+<h4 class="mt-4">My Slots</h4>
+<table class="table table-bordered bg-white">
+    <tr>
+        <th>Examination</th><th>Date</th><th>Time</th><th>Seats</th><th>Booked</th><th>Pending</th><th>Status</th><th></th>
+    </tr>
+    {% for item in slot_data %}
+    <tr>
+        <td>{{ item.slot.examination.exam_name }}</td>
+        <td>{{ item.slot.slot_date }}</td>
+        <td>{{ item.slot.start_time.strftime("%H:%M") }} - {{ item.slot.end_time.strftime("%H:%M") }}</td>
+        <td>{{ item.slot.available_seats }} / {{ item.slot.capacity }}</td>
+        <td>{{ item.booked }}</td>
+        <td>{{ item.pending }}</td>
+        <td>{{ item.slot.status.value }}</td>
+        <td><a href="{{ url_for('slot_students', slot_id=item.slot.id) }}" class="btn btn-info btn-sm">Students</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8">No slots created yet.</td></tr>
+    {% endfor %}
+</table>
 {% endblock %}

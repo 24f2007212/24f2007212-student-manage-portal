@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Booked Students{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h2>Booked Students</h2>
+    <a href="{{ url_for('examiner_dashboard') }}" class="btn btn-secondary btn-sm">Back</a>
+</div>
+<p class="text-muted">
+    {{ slot.examination.exam_name }} |
+    {{ slot.slot_date }} {{ slot.start_time.strftime("%H:%M") }} - {{ slot.end_time.strftime("%H:%M") }} |
+    Seats left: {{ slot.available_seats }} / {{ slot.capacity }}
+</p>
+
+<table class="table table-bordered bg-white">
+    <tr>
+        <th>Booking ID</th><th>Student</th><th>Email</th><th>Phone</th><th>Status</th><th>Marks</th><th>Remarks</th><th></th>
+    </tr>
+    {% for b in bookings %}
+    <tr>
+        <td>{{ b.id }}</td>
+        <td>{{ b.student.name }}</td>
+        <td>{{ b.student.email }}</td>
+        <td>{{ b.student.phone }}</td>
+        <td>{{ b.status.value }}</td>
+        <td>{{ b.total_marks if b.evaluated else "-" }}</td>
+        <td>{{ b.remarks or "" }}</td>
+        <td>
+            {% if b.status != BookingStatus.CANCELLED and slot.slot_date <= today %}
+            <a href="{{ url_for('evaluate', booking_id=b.id) }}" class="btn btn-success btn-sm">
+                {{ "Re-evaluate" if b.evaluated else "Evaluate" }}
+            </a>
+            {% endif %}
+        </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8">No students booked yet.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}
