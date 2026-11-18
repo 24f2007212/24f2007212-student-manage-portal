@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Users{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h3>Examiners</h3>
+    <a href="{{ url_for('add_examiner') }}" class="btn btn-primary btn-sm">Add Examiner</a>
+</div>
+<table class="table table-bordered bg-white mt-2">
+    <tr>
+        <th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Department</th><th>Approved</th><th>Active</th><th>Actions</th>
+    </tr>
+    {% for e in examiners %}
+    <tr>
+        <td>{{ e.id }}</td>
+        <td>{{ e.name }}</td>
+        <td>{{ e.email }}</td>
+        <td>{{ e.phone }}</td>
+        <td>{{ e.examiner_profile.department if e.examiner_profile }}</td>
+        <td>{{ "Yes" if e.approved else "No" }}</td>
+        <td>{{ "Yes" if e.active else "No" }}</td>
+        <td>
+            {% if not e.approved %}
+            <form method="POST" action="{{ url_for('approve_examiner', user_id=e.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-success btn-sm">Approve</button>
+            </form>
+            {% endif %}
+            {% if e.active %}
+            <form method="POST" action="{{ url_for('deactivate_user', user_id=e.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-danger btn-sm">Deactivate</button>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('activate_user', user_id=e.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8">No examiners yet.</td></tr>
+    {% endfor %}
+</table>
+
+<h3 class="mt-4">Students</h3>
+<table class="table table-bordered bg-white mt-2">
+    <tr>
+        <th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Bookings</th><th>Active</th><th>Actions</th>
+    </tr>
+    {% for s in students %}
+    <tr>
+        <td>{{ s.id }}</td>
+        <td>{{ s.name }}</td>
+        <td>{{ s.email }}</td>
+        <td>{{ s.phone }}</td>
+        <td>{{ s.bookings|length }}</td>
+        <td>{{ "Yes" if s.active else "No" }}</td>
+        <td>
+            {% if s.active %}
+            <form method="POST" action="{{ url_for('deactivate_user', user_id=s.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-danger btn-sm">Deactivate</button>
+            </form>
+            {% else %}
+            <form method="POST" action="{{ url_for('activate_user', user_id=s.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-secondary btn-sm">Activate</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">No students yet.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}
