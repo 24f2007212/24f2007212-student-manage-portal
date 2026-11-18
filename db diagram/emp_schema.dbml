@@ -1,0 +1,79 @@
+Table users {
+  id integer [pk]
+  name varchar(100) [not null]
+  email varchar(100) [unique, not null]
+  password_hash varchar(200) [not null]
+  phone varchar(15) [not null]
+  approved boolean
+  active boolean
+  created_at datetime
+  role varchar [not null, note: 'ADMIN / EXAMINER / STUDENT']
+}
+Table examiner_profiles {
+  id integer [pk]
+  user_id integer [unique, not null, ref: - users.id]
+  department varchar(100) [not null]
+  designation varchar(100)
+}
+Table courses {
+  id integer [pk]
+  course_code varchar(20) [unique, not null]
+  course_name varchar(100) [not null]
+  description text
+  status varchar [not null]
+  created_at datetime
+}
+Table examinations {
+  id integer [pk]
+  course_id integer [not null, ref: > courses.id]
+  exam_name varchar(100) [not null]
+  exam_type varchar [not null]
+  duration_minutes integer [not null]
+  max_marks integer [not null]
+  slot_creation_start date [not null]
+  slot_creation_end date [not null]
+  booking_start date [not null]
+  booking_end date [not null]
+  status varchar [not null]
+  examiner_id integer [ref: > users.id]
+  results_published boolean
+  created_at datetime
+}
+Table rubrics {
+  id integer [pk]
+  exam_id integer [not null, ref: > examinations.id]
+  criterion_name varchar(100) [not null]
+  max_marks integer [not null]
+  weightage float [not null]
+  description text
+}
+Table exam_slots {
+  id integer [pk]
+  exam_id integer [not null, ref: > examinations.id]
+  examiner_id integer [not null, ref: > users.id]
+  slot_date date [not null]
+  start_time time [not null]
+  end_time time [not null]
+  capacity integer [not null]
+  available_seats integer [not null]
+  status varchar [not null]
+}
+Table bookings {
+  id integer [pk]
+  student_id integer [not null, ref: > users.id]
+  exam_id integer [not null, ref: > examinations.id]
+  slot_id integer [not null, ref: > exam_slots.id]
+  booking_date datetime
+  status varchar [not null]
+  total_marks float
+  remarks text
+  evaluated boolean
+  indexes { (student_id, exam_id) [unique] }
+}
+Table evaluations {
+  id integer [pk]
+  booking_id integer [not null, ref: > bookings.id]
+  rubric_id integer [not null, ref: > rubrics.id]
+  marks float [not null]
+  indexes { (booking_id, rubric_id) [unique] }
+}
