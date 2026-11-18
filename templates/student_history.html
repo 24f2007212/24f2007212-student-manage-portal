@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}My History{% endblock %}
+
+{% block content %}
+<h2>Booking and Examination History</h2>
+
+<table class="table table-bordered bg-white mt-3">
+    <tr>
+        <th>Booking ID</th><th>Examination</th><th>Course</th><th>Type</th><th>Date</th><th>Time</th>
+        <th>Booked On</th><th>Status</th><th>Result</th>
+    </tr>
+    {% for b in bookings %}
+    <tr>
+        <td>{{ b.id }}</td>
+        <td>{{ b.examination.exam_name }}</td>
+        <td>{{ b.examination.course.course_code }}</td>
+        <td>{{ b.examination.exam_type.value }}</td>
+        <td>{{ b.slot.slot_date }}</td>
+        <td>{{ b.slot.start_time.strftime("%H:%M") }} - {{ b.slot.end_time.strftime("%H:%M") }}</td>
+        <td>{{ b.booking_date.strftime("%Y-%m-%d") }}</td>
+        <td>
+            {% if b.status == BookingStatus.BOOKED %}
+            <span class="badge bg-primary">Booked</span>
+            {% elif b.status == BookingStatus.CANCELLED %}
+            <span class="badge bg-danger">Cancelled</span>
+            {% else %}
+            <span class="badge bg-success">Completed</span>
+            {% endif %}
+        </td>
+        <td>
+            {% if b.evaluated and b.examination.results_published %}
+            <a href="{{ url_for('student_result', booking_id=b.id) }}" class="btn btn-info btn-sm">{{ b.total_marks }} / {{ b.examination.max_marks }}</a>
+            {% else %}
+            <small class="text-muted">Not published</small>
+            {% endif %}
+        </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9">No bookings yet.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

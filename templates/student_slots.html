@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Slots - {{ exam.exam_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h2>{{ exam.exam_name }}</h2>
+    <a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary btn-sm">Back</a>
+</div>
+<p class="text-muted">
+    {{ exam.course.course_code }} - {{ exam.course.course_name }} | {{ exam.exam_type.value }} |
+    {{ exam.duration_minutes }} minutes | Booking: {{ exam.booking_start }} to {{ exam.booking_end }}
+</p>
+
+{% if my_booking %}
+<div class="alert alert-success">
+    You have booked the slot on {{ my_booking.slot.slot_date }} at {{ my_booking.slot.start_time.strftime("%H:%M") }}.
+</div>
+{% elif not is_open %}
+<div class="alert alert-secondary">Slot booking is closed for this examination.</div>
+{% endif %}
+
+<table class="table table-bordered bg-white">
+    <tr>
+        <th>Date</th><th>Time</th><th>Examiner</th><th>Seats Left</th><th>Status</th><th></th>
+    </tr>
+    {% for slot in slots %}
+    <tr>
+        <td>{{ slot.slot_date }}</td>
+        <td>{{ slot.start_time.strftime("%H:%M") }} - {{ slot.end_time.strftime("%H:%M") }}</td>
+        <td>{{ slot.examiner.name }}</td>
+        <td>{{ slot.available_seats }} / {{ slot.capacity }}</td>
+        <td>{{ slot.status.value }}</td>
+        <td>
+            {% if is_open and not my_booking and slot.status == SlotStatus.AVAILABLE %}
+            <form method="POST" action="{{ url_for('book_slot', slot_id=slot.id) }}">
+                <button type="submit" class="btn btn-primary btn-sm">Book</button>
+            </form>
+            {% endif %}
+        </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">No slots available yet.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

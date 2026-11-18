@@ -24,6 +24,8 @@
                             <a class="btn btn-sm btn-outline-light" href="{{ url_for('examiner_profile') }}">Profile</a>
                         {% else %}
                             <a class="btn btn-sm btn-outline-light" href="{{ url_for('student_dashboard') }}">Dashboard</a>
+                            <a class="btn btn-sm btn-outline-light" href="{{ url_for('student_history') }}">History</a>
+                            <a class="btn btn-sm btn-outline-light" href="{{ url_for('student_profile') }}">Profile</a>
                         {% endif %}
                         <span class="text-white mx-2">{{ session.get("name") }}</span>
                         <a class="btn btn-sm btn-danger" href="{{ url_for('logout') }}">Logout</a>

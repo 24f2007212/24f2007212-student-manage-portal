@@ -769,6 +769,24 @@ def update_exam_status(exam_id):
 
     return redirect(url_for("exam_detail", exam_id=exam.id))
 
+@app.route("/admin/exam/<int:exam_id>/publish", methods=["POST"])
+def toggle_results(exam_id):
+    if session.get("role") != "ADMIN":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+
+    exam = Examination.query.get_or_404(exam_id)
+
+    exam.results_published = not exam.results_published
+    db.session.commit()
+
+    if exam.results_published:
+        flash("Results published.", "success")
+    else:
+        flash("Results hidden from students.", "warning")
+
+    return redirect(url_for("exam_detail", exam_id=exam.id))
+
 def read_rubric_form(exam, rubric=None):
 
     data = {}
@@ -1247,7 +1265,255 @@ def student_dashboard():
 
     student = User.query.get_or_404(session.get("user_id"))
 
-    return render_template("student_dash.html", student=student)
+    search = request.args.get("search", "").strip()
+    exam_type = request.args.get("exam_type", "").strip()
+    course_id = request.args.get("course_id", "").strip()
+
+    today = date.today()
+
+    query = Examination.query.join(Course).filter(
+        Examination.status == ExamStatus.BOOKING_OPEN,
+        Examination.booking_start <= today,
+        Examination.booking_end >= today,
+        Course.status == CourseStatus.ACTIVE
+    )
+
+    if search:
+        query = query.filter(
+            db.or_(
+                Examination.exam_name.ilike(f"%{search}%"),
+                Course.course_name.ilike(f"%{search}%"),
+                Course.course_code.ilike(f"%{search}%")
+            )
+        )
+
+    if exam_type in ExamType.__members__:
+        query = query.filter(Examination.exam_type == ExamType[exam_type])
+
+    if course_id:
+        query = query.filter(Examination.course_id == course_id)
+
+    available_exams = query.all()
+
+    booked_exam_ids = [
+        b.exam_id for b in student.bookings
+        if b.status in [BookingStatus.BOOKED, BookingStatus.COMPLETED]
+    ]
+
+    upcoming = Booking.query.join(ExamSlot).filter(
+        Booking.student_id == student.id,
+        Booking.status == BookingStatus.BOOKED,
+        ExamSlot.slot_date >= today
+    ).order_by(ExamSlot.slot_date, ExamSlot.start_time).all()
+
+    results = Booking.query.join(Examination).filter(
+        Booking.student_id == student.id,
+        Booking.evaluated == True,
+        Examination.results_published == True
+    ).all()
+
+    courses = Course.query.filter_by(status=CourseStatus.ACTIVE).all()
+
+    return render_template(
+        "student_dash.html",
+        student=student,
+        available_exams=available_exams,
+        booked_exam_ids=booked_exam_ids,
+        upcoming=upcoming,
+        results=results,
+        courses=courses,
+        ExamType=ExamType,
+        search=search,
+        exam_type=exam_type,
+        course_id=course_id,
+        today=today
+    )
+
+def booking_open(exam):
+    return (
+        exam.status == ExamStatus.BOOKING_OPEN
+        and exam.booking_start <= date.today() <= exam.booking_end
+    )
+
+@app.route("/student/exam/<int:exam_id>/slots")
+def student_exam_slots(exam_id):
+    if session.get("role") != "STUDENT":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+
+    exam = Examination.query.get_or_404(exam_id)
+
+    slots = ExamSlot.query.filter_by(exam_id=exam.id).order_by(ExamSlot.slot_date, ExamSlot.start_time).all()
+
+    my_booking = Booking.query.filter(
+        Booking.student_id == session.get("user_id"),
+        Booking.exam_id == exam.id,
+        Booking.status != BookingStatus.CANCELLED
+    ).first()
+
+    return render_template(
+        "student_slots.html",
+        exam=exam,
+        slots=slots,
+        my_booking=my_booking,
+        is_open=booking_open(exam),
+        SlotStatus=SlotStatus
+    )
+
+@app.route("/student/book/<int:slot_id>", methods=["POST"])
+def book_slot(slot_id):
+    if session.get("role") != "STUDENT":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+
+    student_id = session.get("user_id")
+    slot = ExamSlot.query.get_or_404(slot_id)
+    exam = slot.examination
+
+    if not booking_open(exam):
+        flash("Slot booking is closed for this examination.", "danger")
+        return redirect(url_for("student_dashboard"))
+
+    if slot.status != SlotStatus.AVAILABLE or slot.available_seats <= 0:
+        flash("This slot is full.", "danger")
+        return redirect(url_for("student_exam_slots", exam_id=exam.id))
+
+    existing_booking = Booking.query.filter_by(
+        student_id=student_id,
+        exam_id=exam.id
+    ).first()
+
+    if existing_booking:
+
+        if existing_booking.status != BookingStatus.CANCELLED:
+            flash("You have already booked a slot for this examination.", "warning")
+            return redirect(url_for("student_exam_slots", exam_id=exam.id))
+
+        existing_booking.slot_id = slot.id
+        existing_booking.status = BookingStatus.BOOKED
+        existing_booking.booking_date = datetime.utcnow()
+
+    else:
+
+        booking = Booking(
+            student_id=student_id,
+            exam_id=exam.id,
+            slot_id=slot.id,
+            status=BookingStatus.BOOKED
+        )
+        db.session.add(booking)
+
+    slot.available_seats -= 1
+    update_slot_status(slot)
+
+    db.session.commit()
+
+    flash("Slot booked successfully.", "success")
+
+    return redirect(url_for("student_dashboard"))
+
+@app.route("/student/cancel/<int:booking_id>", methods=["POST"])
+def cancel_booking(booking_id):
+    if session.get("role") != "STUDENT":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+
+    booking = Booking.query.get_or_404(booking_id)
+
+    if booking.student_id != session.get("user_id"):
+        flash("You are not authorized to cancel this booking.", "danger")
+        return redirect(url_for("student_dashboard"))
+
+    if booking.status != BookingStatus.BOOKED:
+        flash("This booking cannot be cancelled.", "warning")
+        return redirect(url_for("student_dashboard"))
+
+    if date.today() > booking.examination.booking_end:
+        flash("Booking deadline is over. You cannot cancel now.", "danger")
+        return redirect(url_for("student_dashboard"))
+
+    slot = booking.slot
+
+    booking.status = BookingStatus.CANCELLED
+
+    if slot.available_seats < slot.capacity:
+        slot.available_seats += 1
+    update_slot_status(slot)
+
+    db.session.commit()
+
+    flash("Booking cancelled successfully.", "success")
+
+    return redirect(url_for("student_dashboard"))
+
+@app.route("/student/history")
+def student_history():
+    if session.get("role") != "STUDENT":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+
+    bookings = Booking.query.join(ExamSlot).filter(
+        Booking.student_id == session.get("user_id")
+    ).order_by(ExamSlot.slot_date.desc()).all()
+
+    return render_template(
+        "student_history.html",
+        bookings=bookings,
+        BookingStatus=BookingStatus,
+        today=date.today()
+    )
+
+@app.route("/student/result/<int:booking_id>")
+def student_result(booking_id):
+    if session.get("role") != "STUDENT":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+
+    booking = Booking.query.get_or_404(booking_id)
+
+    if booking.student_id != session.get("user_id"):
+        flash("You are not authorized to view this result.", "danger")
+        return redirect(url_for("student_dashboard"))
+
+    if not booking.evaluated or not booking.examination.results_published:
+        flash("Result is not published yet.", "warning")
+        return redirect(url_for("student_history"))
+
+    return render_template("student_result.html", booking=booking)
+
+@app.route("/student/profile", methods=["GET", "POST"])
+def student_profile():
+    if session.get("role") != "STUDENT":
+        flash("Unauthorized access.", "danger")
+        return redirect(url_for("login"))
+
+    student = User.query.get_or_404(session.get("user_id"))
+
+    if request.method == "POST":
+
+        name = request.form.get("name", "").strip()
+        phone = request.form.get("phone", "").strip()
+
+        if not name:
+            flash("Name cannot be empty.", "danger")
+            return redirect(url_for("student_profile"))
+
+        if not phone.isdigit() or len(phone) != 10:
+            flash("Phone number must contain exactly 10 digits.", "danger")
+            return redirect(url_for("student_profile"))
+
+        student.name = name
+        student.phone = phone
+
+        db.session.commit()
+
+        session["name"] = student.name
+
+        flash("Profile updated successfully.", "success")
+
+        return redirect(url_for("student_profile"))
+
+    return render_template("student_profile.html", student=student)
 
 @app.route("/logout")
 def logout():
