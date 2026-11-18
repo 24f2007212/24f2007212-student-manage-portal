@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exam.exam_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h2>{{ exam.exam_name }}</h2>
+    <div>
+        <a href="{{ url_for('edit_exam', exam_id=exam.id) }}" class="btn btn-warning btn-sm">Edit</a>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-sm">Back</a>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><b>Course:</b> {{ exam.course.course_code }} - {{ exam.course.course_name }}</p>
+                <p><b>Type:</b> {{ exam.exam_type.value }}</p>
+                <p><b>Duration:</b> {{ exam.duration_minutes }} minutes</p>
+                <p><b>Maximum Marks:</b> {{ exam.max_marks }}</p>
+                <p><b>Examiner:</b> {{ exam.assigned_examiner.name if exam.assigned_examiner else "Not assigned" }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><b>Slot Creation:</b> {{ exam.slot_creation_start }} to {{ exam.slot_creation_end }}</p>
+                <p><b>Booking:</b> {{ exam.booking_start }} to {{ exam.booking_end }}</p>
+                <p><b>Status:</b> <span class="badge bg-primary">{{ exam.status.value }}</span></p>
+
+                <form method="POST" action="{{ url_for('update_exam_status', exam_id=exam.id) }}" class="d-flex gap-2">
+                    <select name="status" class="form-select form-select-sm w-auto">
+                        {% for s in ExamStatus %}
+                        <option value="{{ s.name }}" {% if exam.status == s %}selected{% endif %}>{{ s.value }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-success btn-sm">Update Status</button>
+                </form>
+                <small class="text-muted">
+                    Slot Creation = examiners can create slots. Booking Open = students can book.
+                    Closed = both closed.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h4 class="mt-4">Rubrics <small class="text-muted">(total {{ rubric_total }} / {{ exam.max_marks }})</small></h4>
+<table class="table table-bordered bg-white">
+    <tr>
+        <th>Criterion</th><th>Max Marks</th><th>Weightage</th><th>Description</th><th>Actions</th>
+    </tr>
+    {% for rubric in exam.rubrics %}
+    <tr>
+        <td>{{ rubric.criterion_name }}</td>
+        <td>{{ rubric.max_marks }}</td>
+        <td>{{ rubric.weightage }}</td>
+        <td>{{ rubric.description or "" }}</td>
+        <td>
+            <a href="{{ url_for('edit_rubric', rubric_id=rubric.id) }}" class="btn btn-warning btn-sm">Edit</a>
+            <form method="POST" action="{{ url_for('delete_rubric', rubric_id=rubric.id) }}" class="d-inline">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+        </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">No rubrics yet.</td></tr>
+    {% endfor %}
+</table>
+
+<div class="card">
+    <div class="card-body">
+        <h5>Add Rubric</h5>
+        <form method="POST" action="{{ url_for('add_rubric', exam_id=exam.id) }}">
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <input type="text" name="criterion_name" class="form-control" placeholder="Criterion name" required>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <input type="number" name="max_marks" class="form-control" placeholder="Max marks" min="1" required>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <input type="number" name="weightage" class="form-control" placeholder="Weightage" min="0.1" step="0.1" required>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <input type="text" name="description" class="form-control" placeholder="Description">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Add Rubric</button>
+        </form>
+    </div>
+</div>
+
+<h4 class="mt-4">Slots</h4>
+<table class="table table-bordered bg-white">
+    <tr>
+        <th>ID</th><th>Date</th><th>Time</th><th>Examiner</th><th>Seats</th><th>Status</th>
+    </tr>
+    {% for slot in exam.slots %}
+    <tr>
+        <td>{{ slot.id }}</td>
+        <td>{{ slot.slot_date }}</td>
+        <td>{{ slot.start_time.strftime("%H:%M") }} - {{ slot.end_time.strftime("%H:%M") }}</td>
+        <td>{{ slot.examiner.name }}</td>
+        <td>{{ slot.available_seats }} / {{ slot.capacity }}</td>
+        <td>{{ slot.status.value }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">No slots created yet.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}
